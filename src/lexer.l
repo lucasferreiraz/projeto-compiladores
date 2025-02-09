@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "parser.tab.h"
 
 void yyerror(const char *s);
 int yylex(void);
@@ -10,63 +11,77 @@ int yylex(void);
 %option noyywrap
 %option yylineno
 
-%%
-
-[ \t\r]+                 
-\n                       { return '\n'; }
-
-"config"                 { printf("TOKEN: CONFIG\n"); }
-"repita"                 { printf("TOKEN: REPITA\n"); }
-"fim"                    { printf("TOKEN: FIM\n"); }
-"inteiro"                { printf("TOKEN: INTEIRO\n"); }
-"booleano"               { printf("TOKEN: BOOLEANO\n"); }
-"texto"                  { printf("TOKEN: TEXTO\n"); }
-"var"                    { printf("TOKEN: VAR\n"); }
-"se"                     { printf("TOKEN: SE\n"); }
-"senao"                  { printf("TOKEN: SENAO\n"); }
-"entao"                  { printf("TOKEN: ENTAO\n"); }
-"e"                      { printf("TOKEN: E_LOGICO\n"); }
-"ou"                     { printf("TOKEN: OU_LOGICO\n"); }
-"enquanto"               { printf("TOKEN: ENQUANTO\n"); }
-"configurar"             { printf("TOKEN: CONFIGURAR\n"); }
-"como"                   { printf("TOKEN: COMO\n"); }
-"saida"                  { printf("TOKEN: SAIDA\n"); }
-"entrada"                { printf("TOKEN: ENTRADA\n"); }
-"ligar"                  { printf("TOKEN: LIGAR\n"); }
-"desligar"               { printf("TOKEN: DESLIGAR\n"); }
-"canal"                  { printf("TOKEN: CANAL\n"); }
-"ajustarPWM"             { printf("TOKEN: AJUSTAR_PWM\n"); }
-"esperar"                { printf("TOKEN: ESPERAR\n"); }
-"lerDigital"             { printf("TOKEN: LER_DIGITAL\n"); }
-"lerAnalogico"           { printf("TOKEN: LER_ANALOGICO\n"); }
-"conectarWifi"           { printf("TOKEN: CONECTAR_WIFI\n"); }
-"enviarHttp"             { printf("TOKEN: ENVIAR_HTTP\n"); }
-"configurarSerial"       { printf("TOKEN: CONFIGURAR_SERIAL\n"); }
-"escreverSerial"         { printf("TOKEN: ESCREVER_SERIAL\n"); }
-"lerSerial"              { printf("TOKEN: LER_SERIAL\n"); }
-
-"//".*                   {  }
-[0-9]+                   { printf("TOKEN: NUMERO [%s]\n", yytext); }
-\"[^\"]*\"               { printf("TOKEN: STRING [%s]\n", yytext); }
-[a-zA-Z_][a-zA-Z0-9_]*   { printf("TOKEN: IDENTIFICADOR [%s]\n", yytext); }
-
-"=="                     { printf("TOKEN: IGUAL\n"); }
-"!="                     { printf("TOKEN: DIFERENTE\n"); }
-"<"                      { printf("TOKEN: MENOR\n"); }
-">"                      { printf("TOKEN: MAIOR\n"); }
-"<="                     { printf("TOKEN: MENOR_IGUAL\n"); }
-">="                     { printf("TOKEN: MAIOR_IGUAL\n"); }
-"="                      { printf("TOKEN: ATRIBUICAO\n"); }
-"+"                      { printf("TOKEN: MAIS\n"); }
-"-"                      { printf("TOKEN: MENOS\n"); }
-"*"                      { printf("TOKEN: MULT\n"); }
-"/"                      { printf("TOKEN: DIV\n"); }
-";"                      { printf("TOKEN: PONTO_VIRGULA\n"); }
-
-.                        { fprintf(stderr, "Erro léxico: Caractere inválido '%s' na linha %d\n", yytext, yylineno); exit(1); }
+DIGITO  [0-9]
+LETRA   [a-zA-Z_]
+ID      {LETRA}({LETRA}|{DIGITO})*
+NUM     {DIGITO}+
+STRING  \"[^\"]*\"
 
 %%
 
-void yyerror(const char *s) {
-    fprintf(stderr, "Erro léxico: %s\n", s);
-}
+"config"        { return CONFIG; }
+"repita"        { return REPITA; }
+"fim"           { return FIM; }
+"var"           { return VAR; }
+"inteiro"       { return INTEIRO; }
+"booleano"      { return BOOLEANO; }
+"texto"         { return TEXTO; }
+"se"            { return SE; }
+"senao"         { return SENAO; }
+"entao"         { return ENTAO; }
+"enquanto"      { return ENQUANTO; }
+"esperar"       { return ESPERAR; }
+
+"ligar"         { return LIGAR; }
+"desligar"      { return DESLIGAR; }
+"lerDigital"    { return LERDIGITAL; }
+"lerAnalogico"  { return LERANALOGICO; }
+"configurar"    { return CONFIGURAR; }
+"como"          { return COMO; }
+"saida"         { return SAIDA; }
+"entrada"       { return ENTRADA; }
+
+"configurarPWM" { return CONFIGURAR_PWM; }
+"ajustarPWM"    { return AJUSTAR_PWM; }
+"frequencia"    { return FREQUENCIA; }
+"canal"         { return CANAL; }
+"resolucao"     { return RESOLUCAO; }
+"com"           { return COM; }
+"valor"         { return VALOR; }
+
+"conectarWifi"  { return CONECTAR_WIFI; }
+"senha"         { return SENHA; }
+"ssid"          { return SSID; }
+
+"escreverSerial" { return ESCREVER_SERIAL; }
+"lerSerial"      { return LER_SERIAL; }
+"configurarSerial" { return CONFIGURAR_SERIAL; }
+
+"enviarHttp"    { return ENVIAR_HTTP; }
+
+"=="            { return IGUAL; }
+"!="            { return DIFERENTE; }
+"<"             { return MENOR; }
+">"             { return MAIOR; }
+"<="            { return MENORIGUAL; }
+">="            { return MAIORIGUAL; }
+
+"+"             { return MAIS; }
+"-"             { return MENOS; }
+"*"             { return MULTIPLICACAO; }
+"/"             { return DIVISAO; }
+
+"="             { return ATRIBUICAO; }
+";"             { return PONTO_E_VIRGULA; }
+":"             { return DOIS_PONTOS; }
+
+{ID}            { yylval.sval = strdup(yytext); return ID; }
+{NUM}           { yylval.ival = atoi(yytext); return NUM; }
+{STRING}        { yylval.sval = strdup(yytext); return STRING; }
+
+
+[ \t\n]+        ;
+
+.               { fprintf(stderr, "Erro léxico: Caractere inválido '%s' na linha %d\n", yytext, yylineno); exit(1); }
+
+%%
