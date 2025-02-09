@@ -1,0 +1,11 @@
+config
+    ledPin = 2;
+    configurar ledPin como saida;
+fim
+
+repita
+    ligar ledPin;
+    esperar 1000;
+    desligar ledPin;
+    esperar 1000;
+fim
