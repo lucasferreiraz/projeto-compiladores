@@ -24,7 +24,17 @@ struct symbol {
 struct symbol symbol_table[MAX_SYMBOLS];
 int symbol_count = 0;
 
+int lookup_symbol(char* name);
+void add_symbol(char* name, char* type);
+void check_variable(char* name, int line);
+
 void add_symbol(char* name, char* type) {
+    
+    if (lookup_symbol(name) != -1) {
+        fprintf(stderr, "Erro semântico: Variável '%s' já foi declarada (linha %d)\n", name, yylineno);
+        exit(1);
+    }
+    
     if (symbol_count < MAX_SYMBOLS) {
         symbol_table[symbol_count].name = strdup(name);
         symbol_table[symbol_count].type = strdup(type);
