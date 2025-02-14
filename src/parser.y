@@ -3,6 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define MAX_SYMBOLS 100
+
+
 extern int yylex();
 extern int yylineno;
 extern char* yytext;
@@ -12,6 +15,38 @@ char current_type[20];
 
 FILE* output;
 int pwm_channel = 0;
+
+struct symbol {
+    char* name;
+    char* type;
+};
+
+struct symbol symbol_table[MAX_SYMBOLS];
+int symbol_count = 0;
+
+void add_symbol(char* name, char* type) {
+    if (symbol_count < MAX_SYMBOLS) {
+        symbol_table[symbol_count].name = strdup(name);
+        symbol_table[symbol_count].type = strdup(type);
+        symbol_count++;
+    }
+}
+
+int lookup_symbol(char* name) {
+    for (int i = 0; i < symbol_count; i++) {
+        if (strcmp(symbol_table[i].name, name) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void check_variable(char* name, int line) {
+    if (lookup_symbol(name) == -1) {
+        fprintf(stderr, "Erro semântico: Variável '%s' não foi declarada (linha %d)\n", name, line);
+        exit(1);
+    }
+}
 
 void generate_header() {
     fprintf(output, "#include <Arduino.h>\n");
@@ -106,6 +141,7 @@ lista_ids
 
 id_com_atribuicao
     : ID {
+        add_symbol($1, current_type);
         if (strcmp(current_type, "inteiro") == 0) {
             fprintf(output, "int %s;\n", $1);
         } else if (strcmp(current_type, "booleano") == 0) {
@@ -115,6 +151,7 @@ id_com_atribuicao
         }
     }
     | ID ATRIBUICAO NUM {
+        add_symbol($1, current_type);
         if (strcmp(current_type, "inteiro") == 0) {
             fprintf(output, "int %s = %d;\n", $1, $3);
         } else if (strcmp(current_type, "booleano") == 0) {
@@ -124,6 +161,7 @@ id_com_atribuicao
         }
     }
     | ID ATRIBUICAO STRING {
+        check_variable($1, yylineno);
         if (strcmp(current_type, "inteiro") == 0) {
             fprintf(output, "int %s = %s;\n", $1, $3);
         } else if (strcmp(current_type, "booleano") == 0) {
@@ -204,6 +242,7 @@ comando
 
 atribuicao
     : ID ATRIBUICAO expressao PONTO_E_VIRGULA {
+        check_variable($1, yylineno);
         char temp[100];
         sprintf(temp, "%s = %s;\n", $1, $3);
         $$ = strdup(temp);
@@ -212,31 +251,39 @@ atribuicao
 
 comando_gpio
     : CONFIGURAR ID COMO SAIDA PONTO_E_VIRGULA {
+        check_variable($2, yylineno);
         char temp[100];
         sprintf(temp, "pinMode(%s, OUTPUT);\n", $2);
         $$ = strdup(temp);
     }
     | CONFIGURAR ID COMO ENTRADA PONTO_E_VIRGULA {
+        check_variable($2, yylineno);
         char temp[100];
         sprintf(temp, "pinMode(%s, INPUT);\n", $2);
         $$ = strdup(temp);
     }
     | LIGAR ID PONTO_E_VIRGULA {
+        check_variable($2, yylineno);
         char temp[100];
         sprintf(temp, "digitalWrite(%s, HIGH);\n", $2);
         $$ = strdup(temp);
     }
     | DESLIGAR ID PONTO_E_VIRGULA {
+        check_variable($2, yylineno);
         char temp[100];
         sprintf(temp, "digitalWrite(%s, LOW);\n", $2);
         $$ = strdup(temp);
     }
     | ID ATRIBUICAO LERDIGITAL ID PONTO_E_VIRGULA {
+        check_variable($1, yylineno);
+        check_variable($4, yylineno);
         char temp[100];
         sprintf(temp, "%s = digitalRead(%s);\n", $1, $4);
         $$ = strdup(temp);
     }
     | ID ATRIBUICAO LERANALOGICO ID PONTO_E_VIRGULA {
+        check_variable($1, yylineno);
+        check_variable($4, yylineno);
         char temp[100];
         sprintf(temp, "%s = analogRead(%s);\n", $1, $4);
         $$ = strdup(temp);
@@ -245,6 +292,7 @@ comando_gpio
 
 comando_pwm
     : CONFIGURAR_PWM ID COM FREQUENCIA expressao RESOLUCAO expressao PONTO_E_VIRGULA {
+        check_variable($2, yylineno);
         char temp[200];
         sprintf(temp, "ledcSetup(%d, %s, %s);\n    ledcAttachPin(%s, %d);\n", 
                 pwm_channel, $5, $7, $2, pwm_channel);
@@ -252,6 +300,7 @@ comando_pwm
         $$ = strdup(temp);
     }
     | AJUSTAR_PWM ID COM VALOR expressao PONTO_E_VIRGULA {
+        check_variable($2, yylineno);
         char temp[100];
         sprintf(temp, "ledcWrite(%s, %s);\n", $2, $5);
         $$ = strdup(temp);
@@ -260,6 +309,8 @@ comando_pwm
 
 comando_wifi
     : CONECTAR_WIFI ID ID PONTO_E_VIRGULA {
+        check_variable($2, yylineno);
+        check_variable($3, yylineno);
         char temp[500];
         sprintf(temp, "WiFi.begin(%s.c_str(), %s.c_str());\n"
                      "    while (WiFi.status() != WL_CONNECTED) {\n"
@@ -282,6 +333,7 @@ comando_serial
         $$ = strdup(temp);
     }
     | ID ATRIBUICAO LER_SERIAL PONTO_E_VIRGULA {
+        check_variable($1, yylineno);
         char temp[200];
         sprintf(temp, "if(Serial.available()) {\n"
                      "        %s = Serial.readString();\n"
@@ -394,7 +446,10 @@ expressao
     ;
 
 termo
-    : ID { $$ = $1; }
+    : ID { 
+        $$ = $1;
+        check_variable($1, yylineno);
+    }
     | NUM { 
         char temp[20];
         sprintf(temp, "%d", $1);
