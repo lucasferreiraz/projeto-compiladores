@@ -50,8 +50,6 @@ STRING  \"[^\"]*\"
 "valor"         { return VALOR; }
 
 "conectarWifi"  { return CONECTAR_WIFI; }
-"senha"         { return SENHA; }
-"ssid"          { return SSID; }
 
 "escreverSerial" { return ESCREVER_SERIAL; }
 "lerSerial"      { return LER_SERIAL; }
@@ -73,6 +71,7 @@ STRING  \"[^\"]*\"
 
 "="             { return ATRIBUICAO; }
 ";"             { return PONTO_E_VIRGULA; }
+","             { return VIRGULA; }
 ":"             { return DOIS_PONTOS; }
 
 {ID}            { yylval.sval = strdup(yytext); return ID; }
