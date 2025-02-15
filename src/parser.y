@@ -16,6 +16,13 @@ char current_type[20];
 FILE* output;
 int pwm_channel = 0;
 
+typedef enum {
+    TYPE_UNKNOWN,
+    TYPE_INT,
+    TYPE_BOOL,
+    TYPE_STRING
+} VarType;
+
 struct symbol {
     char* name;
     char* type;
@@ -27,9 +34,61 @@ int symbol_count = 0;
 int lookup_symbol(char* name);
 void add_symbol(char* name, char* type);
 void check_variable(char* name, int line);
+char* get_variable_type(char* name);
+VarType str_to_type(const char* type);
+void check_value_type(const char* var_name, const char* value, VarType expected_type, int line);
+void check_operation_type(char* var_name, char operation, int line);
+
+VarType str_to_type(const char* type) {
+    if (strcmp(type, "inteiro") == 0) return TYPE_INT;
+    if (strcmp(type, "booleano") == 0) return TYPE_BOOL;
+    if (strcmp(type, "texto") == 0) return TYPE_STRING;
+    return TYPE_UNKNOWN;
+}
+
+void check_value_type(const char* var_name, const char* value, VarType expected_type, int line) {
+    char str_value[20];
+    if (value[0] >= '0' && value[0] <= '9') {
+        sprintf(str_value, "%d", atoi(value));
+        value = str_value;
+    }
+    
+    if (value[0] >= '0' && value[0] <= '9') {
+        if (expected_type == TYPE_STRING) {
+            fprintf(stderr, "Erro semântico: Valor numérico não pode ser atribuído a variável texto '%s' (linha %d)\n", 
+                    var_name, line);
+            exit(1);
+        }
+    } else if (value[0] == '"') {
+        if (expected_type != TYPE_STRING) {
+            fprintf(stderr, "Erro semântico: String não pode ser atribuída a variável %s '%s' (linha %d)\n", 
+                    expected_type == TYPE_INT ? "inteiro" : "booleano", var_name, line);
+            exit(1);
+        }
+    }
+}
+
+void check_operation_type(char* var_name, char operation, int line) {
+    char* type = get_variable_type(var_name);
+    VarType var_type = str_to_type(type);
+    
+    switch(var_type) {
+        case TYPE_STRING:
+            fprintf(stderr, "Erro semântico: Operações aritméticas não são permitidas com texto (linha %d)\n", line);
+            exit(1);
+            break;
+        case TYPE_BOOL:
+            if (operation != '=' && operation != '!' && operation != '&' && operation != '|') {
+                fprintf(stderr, "Erro semântico: Operação aritmética não permitida com booleano (linha %d)\n", line);
+                exit(1);
+            }
+            break;
+        default:
+            break;
+    }
+}
 
 void add_symbol(char* name, char* type) {
-    
     if (lookup_symbol(name) != -1) {
         fprintf(stderr, "Erro semântico: Variável '%s' já foi declarada (linha %d)\n", name, yylineno);
         exit(1);
@@ -54,6 +113,23 @@ int lookup_symbol(char* name) {
 void check_variable(char* name, int line) {
     if (lookup_symbol(name) == -1) {
         fprintf(stderr, "Erro semântico: Variável '%s' não foi declarada (linha %d)\n", name, line);
+        exit(1);
+    }
+}
+
+char* get_variable_type(char* name) {
+    int index = lookup_symbol(name);
+    if (index != -1) {
+        return symbol_table[index].type;
+    }
+    return NULL;
+}
+
+void check_type_compatibility(char* var_name, char* value_type, int line) {
+    char* var_type = get_variable_type(var_name);
+    if (strcmp(var_type, value_type) != 0) {
+        fprintf(stderr, "Erro semântico: Tipo incompatível. Variável '%s' é do tipo '%s' mas recebeu valor do tipo '%s' (linha %d)\n",
+                var_name, var_type, value_type, line);
         exit(1);
     }
 }
@@ -161,6 +237,10 @@ id_com_atribuicao
         }
     }
     | ID ATRIBUICAO NUM {
+        VarType type = str_to_type(current_type);
+        char num_str[20];
+        sprintf(num_str, "%d", $3);
+        check_value_type($1, num_str, type, yylineno);
         add_symbol($1, current_type);
         if (strcmp(current_type, "inteiro") == 0) {
             fprintf(output, "int %s = %d;\n", $1, $3);
@@ -171,7 +251,9 @@ id_com_atribuicao
         }
     }
     | ID ATRIBUICAO STRING {
-        check_variable($1, yylineno);
+        VarType type = str_to_type(current_type);
+        check_value_type($1, $3, type, yylineno);
+        add_symbol($1, current_type);
         if (strcmp(current_type, "inteiro") == 0) {
             fprintf(output, "int %s = %s;\n", $1, $3);
         } else if (strcmp(current_type, "booleano") == 0) {
@@ -253,6 +335,8 @@ comando
 atribuicao
     : ID ATRIBUICAO expressao PONTO_E_VIRGULA {
         check_variable($1, yylineno);
+        VarType type = str_to_type(get_variable_type($1));
+        check_operation_type($1, '=', yylineno);
         char temp[100];
         sprintf(temp, "%s = %s;\n", $1, $3);
         $$ = strdup(temp);
@@ -404,21 +488,29 @@ bloco_comandos
 expressao
     : termo { $$ = $1; }
     | expressao MAIS termo { 
+        check_operation_type($1, '+', yylineno);
+        check_operation_type($3, '+', yylineno);
         char temp[100];
         sprintf(temp, "%s + %s", $1, $3);
         $$ = strdup(temp);
     }
     | expressao MENOS termo {
+        check_operation_type($1, '-', yylineno);
+        check_operation_type($3, '-', yylineno);
         char temp[100];
         sprintf(temp, "%s - %s", $1, $3);
         $$ = strdup(temp);
     }
     | expressao MULTIPLICACAO termo {
+        check_operation_type($1, '*', yylineno);
+        check_operation_type($3, '*', yylineno);
         char temp[100];
         sprintf(temp, "%s * %s", $1, $3);
         $$ = strdup(temp);
     }
     | expressao DIVISAO termo {
+        check_operation_type($1, '/', yylineno);
+        check_operation_type($3, '/', yylineno);
         char temp[100];
         sprintf(temp, "%s / %s", $1, $3);
         $$ = strdup(temp);
