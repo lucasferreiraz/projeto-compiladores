@@ -1,0 +1,28 @@
+var inteiro: ledVermelho, ledAmarelo, ledVerde;
+
+config
+    ledVermelho = 13;
+    ledAmarelo = 12;
+    ledVerde = 14;
+    
+    configurar ledVermelho como saida;
+    configurar ledAmarelo como saida;
+    configurar ledVerde como saida;
+fim
+
+repita
+    ligar ledVerde;
+    desligar ledAmarelo;
+    desligar ledVermelho;
+    esperar 2000;
+    
+    desligar ledVerde;
+    ligar ledAmarelo;
+    desligar ledVermelho;
+    esperar 2000;
+    
+    desligar ledVerde;
+    desligar ledAmarelo;
+    ligar ledVermelho;
+    esperar 2000;
+fim

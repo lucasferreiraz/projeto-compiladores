@@ -1,0 +1,19 @@
+var inteiro: ledPin, botao;
+var booleano: estadoBotao;
+
+config
+    ledPin = 2;
+    botao = 4;
+    configurar ledPin como saida;
+    configurar botao como entrada;
+fim
+
+repita
+    estadoBotao = lerDigital botao;
+    
+    se estadoBotao == 1 entao
+        ligar ledPin;
+    senao
+        desligar ledPin;
+    fim
+fim

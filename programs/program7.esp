@@ -1,0 +1,35 @@
+var inteiro: ledPin, botaoPin, pwmPin, valorPWM;
+var booleano: estadoBotao;
+
+config
+    ledPin = 2;
+    botaoPin = 4;
+    pwmPin = 5;
+    valorPWM = 128;
+    
+    configurar ledPin como saida;
+    configurar botaoPin como entrada;
+    configurarPWM pwmPin com frequencia 5000 resolucao 8;
+    
+    // tenta ler de um pino não configurado como entrada
+    // estadoBotao = lerDigital ledPin;
+    
+    // tenta ajustar PWM em um pino não configurado para PWM
+    // ajustarPWM ledPin com valor valorPWM;
+    
+    // tenta ligar um pino de entrada
+    ligar botaoPin;
+fim
+
+repita
+    // usar os pinos corretamente
+    estadoBotao = lerDigital botaoPin;
+    
+    se estadoBotao == 1 entao
+        ligar ledPin;
+        ajustarPWM pwmPin com valor valorPWM;
+    senao
+        desligar ledPin;
+        ajustarPWM pwmPin com valor 0;
+    fim
+fim

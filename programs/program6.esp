@@ -1,0 +1,24 @@
+var inteiro: ledPin, botaoPin;
+var booleano: estadoBotao;
+
+config
+    ledPin = 2;
+    botaoPin = 4;
+    configurar ledPin como saida;
+    configurar botaoPin como entrada;
+    configurarSerial 115200;
+fim
+
+repita
+    estadoBotao = lerDigital botaoPin;
+    
+    se estadoBotao == 1 entao
+        ligar ledPin;
+        escreverSerial "Botão Pressionado - LED Ligado";
+    senao
+        desligar ledPin;
+        escreverSerial "Botão Solto - LED Desligado";
+    fim
+    
+    esperar 100;
+fim

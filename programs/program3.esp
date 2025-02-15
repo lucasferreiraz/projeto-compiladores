@@ -1,4 +1,4 @@
-var inteiro: ledPin = 2;
+var inteiro: ledPin;
 
 config
     ledPin = 2;
@@ -9,5 +9,5 @@ repita
     ligar ledPin;
     esperar 1000;
     desligar ledPin;
-    esperar 2000;
+    esperar 1000;
 fim
