@@ -2,7 +2,7 @@
 
 bison -d src/parser.y
 flex src/lexer.l
-gcc parser.tab.c lex.yy.c -o parser -lfl
+gcc parser.tab.c lex.yy.c symbol_table.c pin_manager.c type_checker.c code_generator.c -o parser -lfl
 
 
-./parser programs/program6.esp
+./parser programs/program4.esp

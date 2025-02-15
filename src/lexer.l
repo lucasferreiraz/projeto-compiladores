@@ -44,7 +44,6 @@ STRING  \"[^\"]*\"
 "configurarPWM" { return CONFIGURAR_PWM; }
 "ajustarPWM"    { return AJUSTAR_PWM; }
 "frequencia"    { return FREQUENCIA; }
-"canal"         { return CANAL; }
 "resolucao"     { return RESOLUCAO; }
 "com"           { return COM; }
 "valor"         { return VALOR; }
