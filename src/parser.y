@@ -4,7 +4,7 @@
 #include <string.h>
 
 #define MAX_SYMBOLS 100
-
+#define MAX_PINS 50
 
 extern int yylex();
 extern int yylineno;
@@ -23,6 +23,18 @@ typedef enum {
     TYPE_STRING
 } VarType;
 
+typedef enum {
+    PIN_UNDEFINED,
+    PIN_INPUT,
+    PIN_OUTPUT,
+    PIN_PWM
+} PinMode;
+
+struct pin_config {
+    char* name;
+    PinMode mode;
+};
+
 struct symbol {
     char* name;
     char* type;
@@ -31,6 +43,9 @@ struct symbol {
 struct symbol symbol_table[MAX_SYMBOLS];
 int symbol_count = 0;
 
+struct pin_config pin_table[MAX_PINS];
+int pin_count = 0;
+
 int lookup_symbol(char* name);
 void add_symbol(char* name, char* type);
 void check_variable(char* name, int line);
@@ -38,6 +53,47 @@ char* get_variable_type(char* name);
 VarType str_to_type(const char* type);
 void check_value_type(const char* var_name, const char* value, VarType expected_type, int line);
 void check_operation_type(char* var_name, char operation, int line);
+void set_pin_mode(char* name, PinMode mode);
+PinMode get_pin_mode(char* name);
+void check_pin_mode(char* name, PinMode required_mode, const char* operation, int line);
+
+void set_pin_mode(char* name, PinMode mode) {
+    for(int i = 0; i < pin_count; i++) {
+        if(strcmp(pin_table[i].name, name) == 0) {
+            pin_table[i].mode = mode;
+            return;
+        }
+    }
+    if(pin_count < MAX_PINS) {
+        pin_table[pin_count].name = strdup(name);
+        pin_table[pin_count].mode = mode;
+        pin_count++;
+    }
+}
+
+PinMode get_pin_mode(char* name) {
+    for(int i = 0; i < pin_count; i++) {
+        if(strcmp(pin_table[i].name, name) == 0) {
+            return pin_table[i].mode;
+        }
+    }
+    return PIN_UNDEFINED;
+}
+
+void check_pin_mode(char* name, PinMode required_mode, const char* operation, int line) {
+    PinMode current_mode = get_pin_mode(name);
+    if(current_mode == PIN_UNDEFINED) {
+        fprintf(stderr, "Erro semântico: Pino '%s' não foi configurado antes de %s (linha %d)\n", 
+                name, operation, line);
+        exit(1);
+    }
+    if(current_mode != required_mode) {
+        const char* mode_str[] = {"indefinido", "entrada", "saída", "PWM"};
+        fprintf(stderr, "Erro semântico: Operação '%s' requer pino configurado como %s, mas '%s' está configurado como %s (linha %d)\n",
+                operation, mode_str[required_mode], name, mode_str[current_mode], line);
+        exit(1);
+    }
+}
 
 VarType str_to_type(const char* type) {
     if (strcmp(type, "inteiro") == 0) return TYPE_INT;
@@ -346,24 +402,28 @@ atribuicao
 comando_gpio
     : CONFIGURAR ID COMO SAIDA PONTO_E_VIRGULA {
         check_variable($2, yylineno);
+        set_pin_mode($2, PIN_OUTPUT);
         char temp[100];
         sprintf(temp, "pinMode(%s, OUTPUT);\n", $2);
         $$ = strdup(temp);
     }
     | CONFIGURAR ID COMO ENTRADA PONTO_E_VIRGULA {
         check_variable($2, yylineno);
+        set_pin_mode($2, PIN_INPUT);
         char temp[100];
         sprintf(temp, "pinMode(%s, INPUT);\n", $2);
         $$ = strdup(temp);
     }
     | LIGAR ID PONTO_E_VIRGULA {
         check_variable($2, yylineno);
+        check_pin_mode($2, PIN_OUTPUT, "ligar", yylineno);
         char temp[100];
         sprintf(temp, "digitalWrite(%s, HIGH);\n", $2);
         $$ = strdup(temp);
     }
     | DESLIGAR ID PONTO_E_VIRGULA {
         check_variable($2, yylineno);
+        check_pin_mode($2, PIN_OUTPUT, "desligar", yylineno);
         char temp[100];
         sprintf(temp, "digitalWrite(%s, LOW);\n", $2);
         $$ = strdup(temp);
@@ -371,6 +431,7 @@ comando_gpio
     | ID ATRIBUICAO LERDIGITAL ID PONTO_E_VIRGULA {
         check_variable($1, yylineno);
         check_variable($4, yylineno);
+        check_pin_mode($4, PIN_INPUT, "lerDigital", yylineno);
         char temp[100];
         sprintf(temp, "%s = digitalRead(%s);\n", $1, $4);
         $$ = strdup(temp);
@@ -378,6 +439,7 @@ comando_gpio
     | ID ATRIBUICAO LERANALOGICO ID PONTO_E_VIRGULA {
         check_variable($1, yylineno);
         check_variable($4, yylineno);
+        check_pin_mode($4, PIN_INPUT, "lerAnalogico", yylineno);
         char temp[100];
         sprintf(temp, "%s = analogRead(%s);\n", $1, $4);
         $$ = strdup(temp);
@@ -387,6 +449,7 @@ comando_gpio
 comando_pwm
     : CONFIGURAR_PWM ID COM FREQUENCIA expressao RESOLUCAO expressao PONTO_E_VIRGULA {
         check_variable($2, yylineno);
+        set_pin_mode($2, PIN_PWM);
         char temp[200];
         sprintf(temp, "ledcSetup(%d, %s, %s);\n    ledcAttachPin(%s, %d);\n", 
                 pwm_channel, $5, $7, $2, pwm_channel);
@@ -395,6 +458,7 @@ comando_pwm
     }
     | AJUSTAR_PWM ID COM VALOR expressao PONTO_E_VIRGULA {
         check_variable($2, yylineno);
+        check_pin_mode($2, PIN_PWM, "ajustarPWM", yylineno);
         char temp[100];
         sprintf(temp, "ledcWrite(%s, %s);\n", $2, $5);
         $$ = strdup(temp);
