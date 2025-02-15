@@ -16,6 +16,9 @@ char current_type[20];
 FILE* output;
 int pwm_channel = 0;
 
+extern FILE* yyin;
+char output_filename[256];
+
 typedef enum {
     TYPE_UNKNOWN,
     TYPE_INT,
@@ -56,6 +59,7 @@ void check_operation_type(char* var_name, char operation, int line);
 void set_pin_mode(char* name, PinMode mode);
 PinMode get_pin_mode(char* name);
 void check_pin_mode(char* name, PinMode required_mode, const char* operation, int line);
+void generate_output_filename(const char* input_filename);
 
 void set_pin_mode(char* name, PinMode mode) {
     for(int i = 0; i < pin_count; i++) {
@@ -196,7 +200,7 @@ void generate_header() {
 }
 
 void start_setup() {
-    fprintf(output, "void setup() {\n");
+    fprintf(output, "\nvoid setup() {\n");
     fprintf(output, "    Serial.begin(115200);\n");
 }
 
@@ -206,6 +210,20 @@ void start_loop() {
 
 void end_block() {
     fprintf(output, "}\n\n");
+}
+
+void generate_output_filename(const char* input_filename) {
+    char temp[256];
+    strcpy(temp, input_filename);
+    
+    char* dot = strrchr(temp, '.');
+    if (dot != NULL) {
+        *dot = '\0';
+    }
+    
+    strcat(temp, ".cpp");
+    
+    strcpy(output_filename, temp);
 }
 
 %}
@@ -244,7 +262,7 @@ void end_block() {
 
 programa
     : { 
-        output = fopen("output.cpp", "w");
+        output = fopen(output_filename, "w");
         generate_header(); 
       }
       declaracoes 
@@ -391,8 +409,6 @@ comando
 atribuicao
     : ID ATRIBUICAO expressao PONTO_E_VIRGULA {
         check_variable($1, yylineno);
-        VarType type = str_to_type(get_variable_type($1));
-        check_operation_type($1, '=', yylineno);
         char temp[100];
         sprintf(temp, "%s = %s;\n", $1, $3);
         $$ = strdup(temp);
@@ -631,8 +647,22 @@ void yyerror(const char* s) {
     exit(1);
 }
 
-int main() {
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Uso: %s <arquivo.esp>\n", argv[0]);
+        return 1;
+    }
+
+    generate_output_filename(argv[1]);
+
+    if (!(yyin = fopen(argv[1], "r"))) {
+        fprintf(stderr, "Não foi possível abrir o arquivo %s\n", argv[1]);
+        return 1;
+    }
+
     yyparse();
+    fclose(yyin);
+    
     printf("Análise sintática e geração de código concluídas com sucesso!\n");
     return 0;
 }

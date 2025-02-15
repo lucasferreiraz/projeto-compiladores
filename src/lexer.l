@@ -78,7 +78,7 @@ STRING  \"[^\"]*\"
 {NUM}           { yylval.ival = atoi(yytext); return NUM; }
 {STRING}        { yylval.sval = strdup(yytext); return STRING; }
 
-
+"//".*\n        ;
 [ \t\n]+        ;
 
 .               { fprintf(stderr, "Erro léxico: Caractere inválido '%s' na linha %d\n", yytext, yylineno); exit(1); }
