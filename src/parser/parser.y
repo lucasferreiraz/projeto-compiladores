@@ -196,6 +196,9 @@ comando
 atribuicao
     : ID ATRIBUICAO expressao PONTO_E_VIRGULA {
         check_variable($1, yylineno);
+        char* var_type = get_variable_type($1);
+        VarType type = str_to_type(get_variable_type($1));
+        check_value_type($1, $3, type, yylineno);
         char temp[100];
         sprintf(temp, "%s = %s;\n", $1, $3);
         $$ = strdup(temp);

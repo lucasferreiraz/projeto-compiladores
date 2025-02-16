@@ -13,16 +13,28 @@ VarType str_to_type(const char* type) {
     return TYPE_UNKNOWN;
 }
 
-void check_value_type(const char* var_name, const char* value, VarType expected_type, int line) {
-    char str_value[20];
-    if (value[0] >= '0' && value[0] <= '9') {
-        sprintf(str_value, "%d", atoi(value));
-        value = str_value;
+void check_value_type(const char* var_name, char* value, VarType expected_type, int line) {
+    if (value[0] != '"' && !(value[0] >= '0' && value[0] <= '9')) {
+        char* expr_type = get_variable_type(value);
+        if (expr_type != NULL) {
+            VarType value_type = str_to_type(expr_type);
+            if (value_type != expected_type) {
+                fprintf(stderr, "Erro semântico: Tipo incompatível. Variável '%s' é do tipo '%s' mas recebeu valor do tipo '%s' (linha %d)\n",
+                        var_name, 
+                        expected_type == TYPE_INT ? "inteiro" : 
+                        expected_type == TYPE_BOOL ? "booleano" : "texto",
+                        value_type == TYPE_INT ? "inteiro" : 
+                        value_type == TYPE_BOOL ? "booleano" : "texto",
+                        line);
+                exit(1);
+            }
+            return;
+        }
     }
     
     if (value[0] >= '0' && value[0] <= '9') {
         if (expected_type == TYPE_STRING) {
-            fprintf(stderr, "Erro semântico: Valor numérico não pode ser atribuído a variável texto '%s' (linha %d)\n", 
+            fprintf(stderr, "Erro semântico: Não é possível atribuir número à variável texto '%s' (linha %d)\n", 
                     var_name, line);
             exit(1);
         }
