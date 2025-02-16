@@ -10,9 +10,14 @@ int symbol_count = 0;
 
 // Implementação das funções
 void add_symbol(char* name, char* type, int line) {
-    if (lookup_symbol(name) != -1) {
-        fprintf(stderr, "Erro semântico: Variável '%s' já foi declarada (linha %d)\n", name, line);
-        exit(1);
+    // Verifica se já existe uma variável com mesmo nome E mesmo tipo
+    for (int i = 0; i < symbol_count; i++) {
+        if (strcmp(symbol_table[i].name, name) == 0 && 
+            strcmp(symbol_table[i].type, type) == 0) {
+            fprintf(stderr, "Erro semântico: Variável '%s' do tipo '%s' já foi declarada (linha %d)\n", 
+                    name, type, line);
+            exit(1);
+        }
     }
     
     if (symbol_count < MAX_SYMBOLS) {
