@@ -4,13 +4,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// Definição das variáveis globais
 struct symbol symbol_table[MAX_SYMBOLS];
 int symbol_count = 0;
 
-// Implementação das funções
 void add_symbol(char* name, char* type, int line) {
-    // Verifica se já existe uma variável com mesmo nome E mesmo tipo
     for (int i = 0; i < symbol_count; i++) {
         if (strcmp(symbol_table[i].name, name) == 0 && 
             strcmp(symbol_table[i].type, type) == 0) {

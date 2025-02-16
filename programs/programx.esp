@@ -1,0 +1,10 @@
+var inteiro: ledPin, sensor;
+
+config
+    configurar ledPin como saida;
+fim
+
+repita
+    estado = lerDigital sensor;       // Erro: sensor noo configurado como entrada
+    ajustarPWM ledPin com valor 128;  // Erro: pino nao configurado como PWM
+fim
