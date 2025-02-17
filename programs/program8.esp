@@ -1,0 +1,24 @@
+var inteiro: ledPin = 2;
+var inteiro: contador = 0;
+
+config
+    configurar ledPin como saida;
+fim
+
+repita
+    enquanto
+        ligar ledPin;
+        esperar 500;
+        desligar ledPin;
+        esperar 500;
+        
+        contador = contador + 1;
+        
+        se contador == 5 entao
+            quebrar;
+        fim
+    fim
+    
+    contador = 0;
+    esperar 3000;
+fim

@@ -48,6 +48,10 @@ void check_value_type(const char* var_name, char* value, VarType expected_type, 
 }
 
 void check_operation_type(char* var_name, char operation, int line) {
+    if (var_name[0] >= '0' && var_name[0] <= '9') {
+        return;
+    }
+    
     char* type = get_variable_type(var_name);
     VarType var_type = str_to_type(type);
     

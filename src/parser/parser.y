@@ -22,7 +22,7 @@ void yyerror(const char* s);
 
 %token CONFIG REPITA FIM VAR
 %token INTEIRO BOOLEANO TEXTO
-%token SE SENAO ENTAO ENQUANTO ESPERAR
+%token SE SENAO ENTAO ENQUANTO QUEBRAR ESPERAR
 %token LIGAR DESLIGAR LERDIGITAL LERANALOGICO
 %token CONFIGURAR COMO SAIDA ENTRADA
 %token CONFIGURAR_PWM AJUSTAR_PWM FREQUENCIA RESOLUCAO
@@ -38,7 +38,7 @@ void yyerror(const char* s);
 %token <sval> ID STRING
 
 %type <sval> comando_gpio comando_pwm comando_wifi comando_serial
-%type <sval> comando_http comando_esperar comando_condicional comando_enquanto
+%type <sval> comando_http comando_esperar comando_condicional comando_enquanto comando_quebrar
 %type <sval> atribuicao expressao termo bloco_comandos comando
 
 %left MAIS MENOS
@@ -191,6 +191,9 @@ comando
     | comando_enquanto {
         $$ = $1;
     }
+    | comando_quebrar { 
+        $$ = $1; 
+    }
     ;
 
 atribuicao
@@ -342,6 +345,14 @@ comando_enquanto
     : ENQUANTO bloco_comandos FIM {
         char temp[1000];
         sprintf(temp, "while(1) {\n%s    }\n", $2);
+        $$ = strdup(temp);
+    }
+    ;
+
+comando_quebrar
+    : QUEBRAR PONTO_E_VIRGULA {
+        char temp[100];
+        sprintf(temp, "break;\n");
         $$ = strdup(temp);
     }
     ;

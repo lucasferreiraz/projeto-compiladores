@@ -30,6 +30,7 @@ STRING  \"[^\"]*\"
 "senao"         { return SENAO; }
 "entao"         { return ENTAO; }
 "enquanto"      { return ENQUANTO; }
+"quebrar"       { return QUEBRAR; }
 "esperar"       { return ESPERAR; }
 
 "ligar"         { return LIGAR; }
